@@ -14,7 +14,7 @@ const PIVOTAL = new Set([
 type Row = { key: string; label: string; value: string; note?: string };
 
 function yesNo(value?: boolean) {
-  return value === undefined ? "—" : value ? "yes" : "no";
+  return value === undefined ? "n/a" : value ? "yes" : "no";
 }
 
 export function EvidenceLedger({ evidence }: { evidence: Evidence }) {
@@ -22,23 +22,23 @@ export function EvidenceLedger({ evidence }: { evidence: Evidence }) {
     {
       key: "since_last_push",
       label: "last push",
-      value: evidence.since_last_push ?? "—",
+      value: evidence.since_last_push ?? "n/a",
       note: bucketWords(evidence.since_last_push),
     },
     {
       key: "stale_open_threads",
       label: "threads untouched 90d+",
-      value: evidence.stale_open_threads ?? "—",
+      value: evidence.stale_open_threads ?? "n/a",
     },
     {
       key: "open_threads",
       label: "open threads",
-      value: evidence.open_threads ?? "—",
+      value: evidence.open_threads ?? "n/a",
     },
     {
       key: "oldest_open_thread_age",
       label: "oldest open thread",
-      value: evidence.oldest_open_thread_age ?? "—",
+      value: evidence.oldest_open_thread_age ?? "n/a",
       note: bucketWords(evidence.oldest_open_thread_age),
     },
     {
@@ -50,12 +50,12 @@ export function EvidenceLedger({ evidence }: { evidence: Evidence }) {
       key: "maintainer_replied_recently",
       label: "owner on a live thread (90d)",
       value: yesNo(evidence.maintainer_replied_recently),
-      note: "proxy — not proof of a reply",
+      note: "proxy, not proof of a reply",
     },
     {
       key: "maintainer_active_elsewhere",
       label: "owner active elsewhere",
-      value: evidence.maintainer_active_elsewhere ?? "—",
+      value: evidence.maintainer_active_elsewhere ?? "n/a",
       note: "gone, or just done with this one?",
     },
     {
@@ -70,12 +70,12 @@ export function EvidenceLedger({ evidence }: { evidence: Evidence }) {
     },
     { key: "archived", label: "archived", value: yesNo(evidence.archived) },
     { key: "disabled", label: "disabled", value: yesNo(evidence.disabled) },
-    { key: "stars", label: "reach (stars)", value: evidence.stars ?? "—" },
-    { key: "license", label: "licence", value: evidence.license ?? "—" },
+    { key: "stars", label: "reach (stars)", value: evidence.stars ?? "n/a" },
+    { key: "license", label: "licence", value: evidence.license ?? "n/a" },
     {
       key: "snapshot_day",
       label: "snapshot taken",
-      value: evidence.snapshot_day ?? "—",
+      value: evidence.snapshot_day ?? "n/a",
     },
   ];
 

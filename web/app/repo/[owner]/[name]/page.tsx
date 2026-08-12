@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   return {
     title: pact?.has_verdict
-      ? `${repo} — ${statusStyle(pact.status).label} · BusFactor`
-      : `${repo} — BusFactor`,
+      ? `${repo} · ${statusStyle(pact.status).label} · BusFactor`
+      : `${repo} · BusFactor`,
     description:
       pact?.headline ?? `No dormancy inquest has been heard for ${repo} yet.`,
   };
@@ -45,7 +45,7 @@ function EmptyDossier({ repo }: { repo: string }) {
       </h1>
       <p className="mono mt-6 text-sm text-ink-soft">{repo}</p>
       <p className="mt-6 max-w-lg leading-relaxed text-ink-soft">
-        Nobody has opened an inquest on this repository yet. Anyone can — it takes
+        Nobody has opened an inquest on this repository yet. Anyone can. It takes
         one transaction, and the ruling belongs to everybody afterwards.
       </p>
       <Link href="/" className="btn mt-8 inline-block">
@@ -149,7 +149,7 @@ export default async function RepoPage({ params }: Params) {
 
           <p className="mt-6 border-t border-rule pt-4 text-[0.82rem] leading-relaxed text-ink-soft">
             Durations are stored as buckets, never as timestamps. That is not
-            imprecision — it is the only way two validators fetching the same page
+            imprecision. It is the only way two validators fetching the same page
             forty minutes apart can be asked to agree.
           </p>
         </section>
@@ -163,7 +163,7 @@ export default async function RepoPage({ params }: Params) {
             <p className="mono mt-4 text-[0.68rem] text-ink-faint">
               {pact.registered
                 ? "written by the registered steward"
-                : "court default — no maintainer has claimed this pact"}
+                : "court default, no maintainer has claimed this pact"}
             </p>
           </section>
 
@@ -180,7 +180,7 @@ function Register({ pact }: { pact: Pact }) {
     { label: "inquests", value: pact.inquests },
     {
       label: "urgency",
-      value: pact.has_verdict ? `${pact.urgency}/100` : "—",
+      value: pact.has_verdict ? `${pact.urgency}/100` : "n/a",
     },
     {
       label: "steward",

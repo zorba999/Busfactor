@@ -29,7 +29,7 @@ const MECHANISM = [
   {
     step: "04",
     title: "the model rules, the network checks",
-    body: "Validators re-run the whole investigation and compare the decision that carries consequences — does this need a new steward — and the pivotal facts behind it. Urgency is never asked for; it is computed from facts everyone already agreed on.",
+    body: "Validators re-run the whole investigation and compare the one decision that carries consequences: does this need a new steward. Then they compare the pivotal facts behind it. Urgency is never asked for; it is computed from facts everyone already agreed on.",
   },
 ];
 
@@ -66,7 +66,7 @@ export default async function Home() {
               Zero commits for two years describes a complete little library and a
               rotting one with an unpatched CVE. The raw numbers are identical.
               Registries wait years to tell them apart, because someone has to{" "}
-              <em>judge</em> — and nobody wants to be that someone.
+              <em>judge</em>, and nobody wants to be that someone.
             </p>
 
             <p className="mt-4 max-w-xl text-[1.02rem] leading-relaxed text-ink-soft">
@@ -206,8 +206,8 @@ export default async function Home() {
               backdoor to the world.
             </p>
             <p>
-              So the contract will happily rule that a repository is dormant — and
-              then do <strong className="text-ink">nothing</strong> with it. A
+              So the contract will happily rule that a repository is dormant, then
+              do <strong className="text-ink">nothing</strong> with it. A
               handover only arms when the maintainer named a successor themselves,
               while they were alive and holding the key, before any claim existed.
             </p>
@@ -227,7 +227,7 @@ export default async function Home() {
         <div className="hairline flex flex-wrap items-center justify-between gap-4 pt-8">
           <p className="max-w-md text-[0.95rem] leading-relaxed text-ink-soft">
             Maintain something small and quiet? Register a pact and write your own
-            dormancy policy — in plain language, not a number of days.
+            dormancy policy, in plain language, not a number of days.
           </p>
           <Link href="/repo/stevemao/left-pad" className="btn btn-ghost">
             read a verdict →

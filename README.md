@@ -1,4 +1,4 @@
-# BusFactor — a dormancy court for open source
+# BusFactor: a dormancy court for open source
 
 **Is this package dead, or is it just finished?**
 
@@ -23,8 +23,8 @@ leader rather than trust it.
 
 Three things, and deliberately not a fourth:
 
-1. **Dormancy attestation.** A neutral, timestamped, evidence-backed ruling —
-   `ACTIVE` / `FINISHED` / `DORMANT` / `ROTTING` — that a registry, a funder, or
+1. **Dormancy attestation.** A neutral, timestamped, evidence-backed ruling
+   (`ACTIVE` / `FINISHED` / `DORMANT` / `ROTTING`) that a registry, a funder, or
    a foundation can point at. Today that call is made by an employee inside a
    company with no transparency. Here it is made in the open and is appealable.
 2. **Pacts and heartbeats.** A maintainer can claim a repository, write their
@@ -35,7 +35,7 @@ Three things, and deliberately not a fourth:
    maintainer named a successor themselves, while alive and holding the key.
 
 **What it is not: a way to take someone's package.** Automatic handover is not
-a feature, it is the xz/liblzma attack — befriend a tired maintainer, inherit
+a feature, it is the xz/liblzma attack: befriend a tired maintainer, inherit
 commit rights, ship a backdoor. With no pre-designated successor, a `DORMANT`
 verdict moves nothing at all. The attestation is the product.
 
@@ -47,7 +47,7 @@ verdict moves nothing at all. The attestation is the product.
 |---|---|
 | Frontend | wallet UX, browsing, formatting, share pages |
 | **Contract** | the evidence snapshot, the ruling, the heartbeat clock, the successor gate |
-| GitHub | raw facts — never trusted; every validator re-fetches and re-derives |
+| GitHub | raw facts, never trusted; every validator re-fetches and re-derives |
 
 The consensus surface is the decision that has consequences: **does this need a
 new steward?** Not the adjective.
@@ -59,13 +59,13 @@ sees `"2y+"`. Two validators fetching the same page forty minutes apart land in
 the same bucket, which is the only reason they can be asked to agree at all.
 
 **Numbers come from code, judgment comes from the model.** An early version
-asked the model for an urgency score from 0–100. One node answered 55, another
-70 — both sensible, and a guaranteed `NO_MAJORITY`. Urgency is now *derived*
+asked the model for an urgency score from 0 to 100. One node answered 55, the
+next answered 70. Both sensible, and a guaranteed `NO_MAJORITY`. Urgency is now *derived*
 from facts every validator has already agreed on. The model rules on the
 question that genuinely needs judgment and nothing else.
 
 **Independent re-derivation, never schema checks.** The validator re-runs the
-entire investigation — three live fetches and a fresh ruling — and compares
+entire investigation (three live fetches and a fresh ruling), then compares
 `needs_steward`, the urgency band, and seven pivotal facts. It never inspects
 the leader's answer for well-formedness and calls that consensus.
 
@@ -91,7 +91,7 @@ web/                        Next.js frontend (Vercel root directory)
 python -m venv .venv && .venv/Scripts/pip install -r requirements.txt
 ```
 
-Lint, then test — always in that order:
+Lint, then test, always in that order:
 
 ```bash
 .venv/Scripts/genvm-lint check contracts/busfactor.py
@@ -133,7 +133,7 @@ The app is Vercel-ready with no extra configuration.
 1. Import the repository, set **Root Directory** to `web`.
 2. Add the two environment variables from `web/.env.example`:
    `NEXT_PUBLIC_CONTRACT_ADDRESS` and `NEXT_PUBLIC_EXPLORER_URL`.
-3. Deploy. No server secrets exist — every write is signed by the visitor's
+3. Deploy. No server secrets exist; every write is signed by the visitor's
    own wallet.
 
 Four things this codebase does specifically so Vercel works:
@@ -144,7 +144,7 @@ Four things this codebase does specifically so Vercel works:
 - **`genlayer-js` is imported lazily** inside the click handler. Importing a
   wallet SDK at module scope is what breaks these apps during SSR.
 - **The browser owns the wait.** A serverless function times out long before
-  GenLayer consensus settles, so no route handler ever awaits finality — the
+  GenLayer consensus settles, so no route handler ever awaits finality. The
   client polls `getTransaction` and drives the progress stepper.
 - **Injected-only wallet adapter.** wagmi handles discovery, account state and
   chain switching, and hands `genlayer-js` a plain EIP-1193 provider. No
@@ -161,7 +161,7 @@ Four things this codebase does specifically so Vercel works:
 - **`LEADER_TIMEOUT` is transient.** A leader that misses its deadline is
   rotated and the transaction settles as `IDLE` with no state change. Retrying
   is the correct response, which is why `scripts/seed.sh` retries. Keeping each
-  non-deterministic block small is the other half of the fix — an earlier
+  non-deterministic block small is the other half of the fix. An earlier
   version pulled `events/public?per_page=100`, which is megabytes of JSON to
   parse inside the VM, and the leader died holding it every single time.
 - **Direct-mode tests do not exercise validators.** They run the leader
@@ -175,6 +175,6 @@ Four things this codebase does specifically so Vercel works:
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 ```
 
-Never `py-genlayer:test` or `:latest` — those are local-development aliases that
+Never `py-genlayer:test` or `:latest`. Those are local-development aliases that
 every GenLayer network rejects. Pinning also means the model behaviour your
 contract was tested against does not change underneath it.

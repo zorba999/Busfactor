@@ -28,11 +28,11 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "BusFactor — is it dead, or just finished?",
+  title: "BusFactor: is it dead, or just finished?",
   description:
     "A neutral dormancy court for open source, running as an intelligent contract on GenLayer Bradbury. Validators read the repository themselves and rule on whether a package is abandoned, finished, or rotting.",
   openGraph: {
-    title: "BusFactor — the dormancy court for open source",
+    title: "BusFactor, the dormancy court for open source",
     description:
       "Zero commits for two years describes both a finished library and a rotting one. BusFactor settles which, on chain.",
     type: "website",

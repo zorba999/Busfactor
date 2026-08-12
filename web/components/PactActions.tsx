@@ -81,9 +81,9 @@ export function PactActions({ pact, defaultPolicy }: { pact: Pact; defaultPolicy
         {tab === "register" && (
           <div className="space-y-4">
             <p className="text-[0.88rem] leading-relaxed text-ink-soft">
-              Claiming the pact lets you write the policy the court judges you by —
-              in plain language, not a day count — and name the one person who may
-              ever inherit it.
+              Claiming the pact lets you write the policy the court judges you
+              by, in plain language rather than a day count, and name the one
+              person who may ever inherit it.
             </p>
 
             <label className="block">
@@ -128,8 +128,8 @@ export function PactActions({ pact, defaultPolicy }: { pact: Pact; defaultPolicy
             </label>
 
             <p className="mono text-[0.7rem] leading-relaxed text-ink-faint">
-              Leave the successor blank and a dormant verdict will still be issued —
-              it just will never move anything.
+              Leave the successor blank and a dormant verdict will still be
+              issued. It just will never move anything.
             </p>
 
             <button

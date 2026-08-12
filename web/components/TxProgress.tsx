@@ -79,7 +79,7 @@ export function TxProgress({
 
       {phase === "accepted" && (
         <p className="mt-3 max-w-md text-[0.78rem] leading-relaxed text-ink-soft">
-          The verdict is on chain. Reload to read it — it stays appealable until
+          The verdict is on chain. Reload to read it. It stays appealable until
           finality.
         </p>
       )}

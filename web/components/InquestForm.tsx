@@ -33,7 +33,7 @@ export function InquestForm({ autofocus = false }: { autofocus?: boolean }) {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!repo) {
-      setHint("Give me a GitHub repository — owner/name, or paste the URL.");
+      setHint("Give me a GitHub repository: owner/name, or paste the URL.");
       return;
     }
     setHint(null);

@@ -64,7 +64,7 @@ export function parseReasons(raw: string): string[] {
 }
 
 export function shortAddress(address?: string) {
-  if (!address || address === ZERO_ADDRESS) return "—";
+  if (!address || address === ZERO_ADDRESS) return "n/a";
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
@@ -75,7 +75,7 @@ export function isZero(address?: string) {
 /** "2026-08-12T15:42:56Z" -> "12 Aug 2026". Fixed locale so SSR and the
  *  browser never disagree during hydration. */
 export function formatDate(iso?: string) {
-  if (!iso || iso.length < 10) return "—";
+  if (!iso || iso.length < 10) return "n/a";
   const months = [
     "Jan",
     "Feb",
@@ -91,7 +91,7 @@ export function formatDate(iso?: string) {
     "Dec",
   ];
   const year = iso.slice(0, 4);
-  const month = months[Number(iso.slice(5, 7)) - 1] ?? "—";
+  const month = months[Number(iso.slice(5, 7)) - 1] ?? "n/a";
   const day = String(Number(iso.slice(8, 10)));
   return `${day} ${month} ${year}`;
 }
@@ -99,16 +99,16 @@ export function formatDate(iso?: string) {
 const BUCKET_WORDS: Record<string, string> = {
   "0-7d": "within a week",
   "8-30d": "within a month",
-  "31-90d": "1–3 months ago",
-  "91-180d": "3–6 months ago",
-  "181-365d": "6–12 months ago",
-  "1-2y": "1–2 years ago",
+  "31-90d": "1 to 3 months ago",
+  "91-180d": "3 to 6 months ago",
+  "181-365d": "6 to 12 months ago",
+  "1-2y": "1 to 2 years ago",
   "2y+": "over 2 years ago",
   unknown: "unknown",
 };
 
 export function bucketWords(bucket?: string) {
-  if (!bucket) return "—";
+  if (!bucket) return "n/a";
   return BUCKET_WORDS[bucket] ?? bucket;
 }
 

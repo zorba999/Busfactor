@@ -41,17 +41,17 @@ export function CaseCard({ pact, index }: { pact: Pact; index: number }) {
       <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-rule pt-3">
         <div>
           <dt className="label">last push</dt>
-          <dd className="mono text-[0.72rem]">{evidence.since_last_push ?? "—"}</dd>
+          <dd className="mono text-[0.72rem]">{evidence.since_last_push ?? "n/a"}</dd>
         </div>
         <div>
           <dt className="label">urgency</dt>
           <dd className="mono text-[0.72rem]">
-            {pact.has_verdict ? `${pact.urgency}/100` : "—"}
+            {pact.has_verdict ? `${pact.urgency}/100` : "n/a"}
           </dd>
         </div>
         <div>
           <dt className="label">stale threads</dt>
-          <dd className="mono text-[0.72rem]">{evidence.stale_open_threads ?? "—"}</dd>
+          <dd className="mono text-[0.72rem]">{evidence.stale_open_threads ?? "n/a"}</dd>
         </div>
         <div>
           <dt className="label">heard</dt>
