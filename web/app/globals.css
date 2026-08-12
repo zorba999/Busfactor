@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paper, not screen. The whole product is a printed verdict. */
+  --color-paper: #f2f0e6;
+  --color-paper-raised: #faf9f3;
+  --color-paper-sunk: #e8e5d7;
+  --color-ink: #17150f;
+  --color-ink-soft: #5e5749;
+  --color-ink-faint: #8e8676;
+  --color-rule: #17150f26;
+  --color-rule-strong: #17150f4d;
+
+  /* One accent per verdict. Alive is loud; at-rest is quiet. */
+  --color-alive: #a8e00f;
+  --color-rest: #1f5e5b;
+  --color-drift: #c2740a;
+  --color-rot: #b33a1a;
+
+  --font-display: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-paper);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Faint fibre so large flat areas read as stock, not as a blank div. */
+  background-image:
+    radial-gradient(circle at 12% 18%, #17150f08 0 1px, transparent 1px),
+    radial-gradient(circle at 72% 62%, #17150f06 0 1px, transparent 1px);
+  background-size: 37px 37px, 53px 53px;
+}
+
+::selection {
+  background: var(--color-alive);
+  color: var(--color-ink);
+}
+
+/* ------------------------------------------------------------------ type */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 0.92;
+  text-transform: lowercase;
+}
+
+/* Display face without the lowercasing -- for text the court did not write,
+   like a headline that came back from the model as a real sentence. */
+.display-quoted {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.018em;
+  line-height: 1.08;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+}
+
+/* --------------------------------------------------------------- surfaces */
+
+.sheet {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-rule);
+  box-shadow:
+    0 1px 0 0 #ffffff inset,
+    0 12px 28px -22px #17150f80;
+}
+
+.hairline {
+  border-top: 1px solid var(--color-rule);
+}
+
+/* Ruled paper for the evidence ledger. */
+.ledger-row + .ledger-row {
+  border-top: 1px dashed var(--color-rule);
+}
+
+/* ---------------------------------------------------------------- ticker */
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 44s linear infinite;
+}
+
+@keyframes ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* --------------------------------------------------------------- controls */
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-ink);
+  padding: 0.7rem 1.15rem;
+  background: var(--color-ink);
+  color: var(--color-paper-raised);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+  box-shadow: 3px 3px 0 0 var(--color-ink);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 var(--color-ink);
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--color-ink);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  box-shadow: 3px 3px 0 0 var(--color-rule-strong);
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: 3px 3px 0 0 var(--color-rule-strong);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-alive);
+  box-shadow: 5px 5px 0 0 var(--color-ink);
+}
+
+.field {
+  font-family: var(--font-mono);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-rule-strong);
+  padding: 0.6rem 0.25rem;
+  width: 100%;
+  color: var(--color-ink);
+  outline: none;
+}
+
+.field::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.field:focus {
+  border-bottom-color: var(--color-ink);
+  background: linear-gradient(to top, #a8e00f2e, transparent 42%);
+}
+
+/* ----------------------------------------------------------------- stamp */
+
+.stamp {
+  transform: rotate(-11deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+  .btn {
+    transition: none;
+  }
+}

@@ -1,0 +1,4 @@
+genlayer-test==0.29.2
+genvm-linter
+eth-account==0.13.3
+python-dotenv==1.0.1

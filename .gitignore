@@ -1,0 +1,23 @@
+# secrets
+.env
+.env.local
+.env*.local
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node
+node_modules/
+.next/
+out/
+.vercel/
+
+# genlayer
+.genlayer/
+deployments/*.local.json
+
+# gltest
+artifacts/
