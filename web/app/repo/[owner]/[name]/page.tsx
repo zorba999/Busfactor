@@ -16,7 +16,9 @@ import {
 import { getDefaultPolicy, getPact } from "@/lib/read";
 import type { Pact } from "@/lib/types";
 
-export const revalidate = 20;
+// StudioNet allows 30 RPC calls per minute, and every render of this page
+// costs two. A short revalidate window burns that budget on nobody's behalf.
+export const revalidate = 60;
 
 type Params = { params: Promise<{ owner: string; name: string }> };
 
@@ -79,7 +81,7 @@ export default async function RepoPage({ params }: Params) {
 
         <div className="grid gap-8 p-6 sm:p-9 lg:grid-cols-[1fr_auto] lg:items-start">
           <div className="min-w-0">
-            <p className="label">certificate of dormancy · genlayer bradbury</p>
+            <p className="label">certificate of dormancy · genlayer studio</p>
 
             <h1 className="mono mt-4 text-[clamp(1.4rem,4.5vw,2.15rem)] leading-tight break-words">
               {pact.repo}

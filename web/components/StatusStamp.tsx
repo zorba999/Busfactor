@@ -79,7 +79,7 @@ export function StatusStamp({
         opacity="0.75"
       >
         <textPath href={`#${id}-arc-bottom`} startOffset="50%" textAnchor="middle">
-          {typeof urgency === "number" ? `URGENCY ${urgency} / 100` : "GENLAYER BRADBURY"}
+          {typeof urgency === "number" ? `URGENCY ${urgency} / 100` : "GENLAYER STUDIO"}
         </textPath>
       </text>
 

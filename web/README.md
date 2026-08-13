@@ -17,7 +17,7 @@ every write is signed by the visitor's own wallet.
 |---|---|
 | `lib/read.ts` | server-side read client, `server-only`; renders the docket without a wallet |
 | `lib/useCourt.ts` | wagmi → genlayer-js bridge for writes, plus transaction polling |
-| `lib/wagmi.ts` | injected-only wallet adapter, Bradbury chain config |
+| `lib/wagmi.ts` | injected-only wallet adapter, Studio chain config |
 | `lib/format.ts` | verdict palette, evidence bucket wording, repo normalisation |
 | `components/StatusStamp.tsx` | the rubber stamp on each certificate |
 | `app/repo/[owner]/[name]` | the verdict dossier |

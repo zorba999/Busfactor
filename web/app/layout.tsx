@@ -30,7 +30,7 @@ const sans = Inter({
 export const metadata: Metadata = {
   title: "BusFactor: is it dead, or just finished?",
   description:
-    "A neutral dormancy court for open source, running as an intelligent contract on GenLayer Bradbury. Validators read the repository themselves and rule on whether a package is abandoned, finished, or rotting.",
+    "A neutral dormancy court for open source, running as an intelligent contract on GenLayer Studio. Validators read the repository themselves and rule on whether a package is abandoned, finished, or rotting.",
   openGraph: {
     title: "BusFactor, the dormancy court for open source",
     description:
@@ -60,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   rel="noreferrer"
                   className="label hidden hover:text-ink md:inline"
                 >
-                  bradbury · {CONTRACT_ADDRESS.slice(0, 8)}…
+                  studio · {CONTRACT_ADDRESS.slice(0, 8)}…
                 </a>
                 <ConnectButton />
               </div>
@@ -89,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   {CONTRACT_ADDRESS}
                 </a>
                 <p className="mono mt-1 text-[0.72rem] text-ink-faint">
-                  GenLayer Bradbury · chain 4221
+                  GenLayer Studio · chain 61999
                 </p>
               </div>
               <div>

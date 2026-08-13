@@ -8,7 +8,9 @@ import { STATUS_COPY } from "@/lib/format";
 import { getDocket, getStats } from "@/lib/read";
 import type { Status } from "@/lib/types";
 
-export const revalidate = 20;
+// StudioNet allows 30 RPC calls per minute, and every render of this page
+// costs two. A short revalidate window burns that budget on nobody's behalf.
+export const revalidate = 60;
 
 const MECHANISM = [
   {
@@ -48,7 +50,7 @@ export default async function Home() {
         <div className="grid gap-10 lg:grid-cols-[1.55fr_1fr] lg:items-start">
           <div>
             <p className="label">
-              open-source dormancy court · genlayer bradbury testnet
+              open-source dormancy court · genlayer studio network
             </p>
 
             <h1 className="display mt-5 text-[clamp(3rem,10.5vw,7.5rem)]">

@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useAccount, useConnect, useSwitchChain } from "wagmi";
 
-import { CHAIN, CONTRACT_ADDRESS, bradburyChain } from "./contract";
+import { CHAIN, CONTRACT_ADDRESS, walletChain } from "./contract";
 
 export type Phase =
   | "idle"
@@ -57,7 +57,7 @@ function describeError(error: unknown): string {
       return "You rejected the request in your wallet.";
     }
     if (candidate.code === 4902) {
-      return "Bradbury is not added to your wallet yet. Approve the network prompt and try again.";
+      return "The GenLayer network is not added to your wallet yet. Approve the network prompt and try again.";
     }
 
     const message =
@@ -110,8 +110,8 @@ export function useCourt() {
       setState({ phase: "wallet", hash: null, error: null });
 
       try {
-        if (chainId !== bradburyChain.id) {
-          await switchChainAsync({ chainId: bradburyChain.id });
+        if (chainId !== walletChain.id) {
+          await switchChainAsync({ chainId: walletChain.id });
         }
 
         const { createClient } = await import("genlayer-js");
@@ -192,7 +192,7 @@ export function useCourt() {
     address,
     isConnected,
     isConnecting,
-    onWrongChain: isConnected && chainId !== bradburyChain.id,
+    onWrongChain: isConnected && chainId !== walletChain.id,
     connectWallet,
     send,
     reset,

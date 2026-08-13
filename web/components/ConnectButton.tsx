@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 
-import { bradburyChain } from "@/lib/contract";
+import { walletChain } from "@/lib/contract";
 import { shortAddress } from "@/lib/format";
 
 export function ConnectButton() {
@@ -38,14 +38,14 @@ export function ConnectButton() {
     );
   }
 
-  if (chainId !== bradburyChain.id) {
+  if (chainId !== walletChain.id) {
     return (
       <button
         className="btn"
         style={{ background: "var(--color-rot)", boxShadow: "3px 3px 0 0 var(--color-ink)" }}
-        onClick={() => switchChain({ chainId: bradburyChain.id })}
+        onClick={() => switchChain({ chainId: walletChain.id })}
       >
-        switch to bradbury
+        switch to studio
       </button>
     );
   }

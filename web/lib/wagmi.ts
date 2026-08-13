@@ -1,7 +1,7 @@
 import { createConfig, http } from "wagmi";
 import { injected } from "wagmi/connectors";
 
-import { RPC_URL, bradburyChain } from "./contract";
+import { RPC_URL, walletChain } from "./contract";
 
 /**
  * Injected-only on purpose: no WalletConnect project id to provision, nothing
@@ -10,9 +10,9 @@ import { RPC_URL, bradburyChain } from "./contract";
  * genlayer-js a plain EIP-1193 provider.
  */
 export const wagmiConfig = createConfig({
-  chains: [bradburyChain],
+  chains: [walletChain],
   connectors: [injected()],
-  transports: { [bradburyChain.id]: http(RPC_URL) },
+  transports: { [walletChain.id]: http(RPC_URL) },
   ssr: true,
 });
 

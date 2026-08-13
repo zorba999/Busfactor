@@ -1,7 +1,7 @@
 # BusFactor
 
 A dormancy court for open source, running as an Intelligent Contract on
-GenLayer Bradbury.
+GenLayer Studio.
 
 Zero commits for two years describes two different repositories: a small
 library that is simply complete, and a rotting one with an unpatched CVE and
@@ -13,8 +13,8 @@ the leader instead of trusting it.
 
 | | |
 |---|---|
-| Contract | [`0xbd8f2BbBc62e2566500b4b67bd1e16B9f43A5756`](https://explorer-bradbury.genlayer.com) |
-| Network | GenLayer Bradbury, chain `4221` |
+| Contract | [`0xB630368B621c9e7D3b46549FBdd2AB6baBEAC01F`](https://genlayer-explorer.vercel.app) |
+| Network | GenLayer Studio Network, chain `61999` |
 | Frontend | Next.js 16 App Router, deploys to Vercel unmodified |
 
 ## Verdicts
@@ -103,11 +103,11 @@ Lint before testing:
 .venv/Scripts/python -m pytest tests/direct -q
 ```
 
-Deploy to Bradbury. The account must be funded; the
+Deploy to Studio. The account must be funded; the
 [faucet](https://testnet-faucet.genlayer.foundation/) issues 100 GEN per day.
 
 ```bash
-npx genlayer network set testnet-bradbury
+npx genlayer network set studionet
 ```
 
 ```bash
