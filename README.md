@@ -13,7 +13,7 @@ the leader instead of trusting it.
 
 | | |
 |---|---|
-| Contract | [`0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78`](https://genlayer-explorer.vercel.app) |
+| Contract | [`0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78`](https://explorer-studio.genlayer.com) |
 | Network | GenLayer Studio Network, chain `61999` |
 | Frontend | Next.js 16 App Router, deploys to Vercel unmodified |
 
