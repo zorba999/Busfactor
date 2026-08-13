@@ -13,7 +13,7 @@ the leader instead of trusting it.
 
 | | |
 |---|---|
-| Contract | [`0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78`](https://explorer-studio.genlayer.com) |
+| Contract | [`0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78`](https://explorer-studio.genlayer.com/address/0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78) |
 | Network | GenLayer Studio Network, chain `61999` |
 | Frontend | Next.js 16 App Router, deploys to Vercel unmodified |
 
@@ -105,8 +105,7 @@ Lint before testing:
 .venv/Scripts/python -m pytest tests/direct -q
 ```
 
-Deploy to Studio. The account must be funded; the
-[faucet](https://testnet-faucet.genlayer.foundation/) issues 100 GEN per day.
+Deploy to Studio. It is gasless, so the account needs no GEN and no faucet.
 
 ```bash
 npx genlayer network set studionet
