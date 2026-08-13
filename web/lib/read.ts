@@ -57,9 +57,19 @@ export async function getPact(repo: string): Promise<Pact | null> {
   }
 }
 
+/**
+ * The court default is a constant in the contract, so fetching it on every
+ * dossier render just burns Studio's 30-calls-per-minute budget for an answer
+ * that cannot change. Hold it for the life of the process.
+ */
+let cachedDefaultPolicy: string | null = null;
+
 export async function getDefaultPolicy(): Promise<string> {
+  if (cachedDefaultPolicy !== null) return cachedDefaultPolicy;
   try {
-    return await read<string>("get_default_policy");
+    const policy = await read<string>("get_default_policy");
+    cachedDefaultPolicy = policy;
+    return policy;
   } catch {
     return "";
   }

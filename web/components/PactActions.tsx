@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import { refreshVerdict } from "@/app/actions";
 import { isZero } from "@/lib/format";
 import type { Pact } from "@/lib/types";
 import { useCourt } from "@/lib/useCourt";
@@ -12,6 +14,7 @@ type Tab = "inquest" | "register" | "heartbeat";
 
 export function PactActions({ pact, defaultPolicy }: { pact: Pact; defaultPolicy: string }) {
   const court = useCourt();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("inquest");
   const [policy, setPolicy] = useState(pact.registered ? pact.policy : defaultPolicy);
   const [handle, setHandle] = useState(pact.successor_handle);
@@ -19,6 +22,22 @@ export function PactActions({ pact, defaultPolicy }: { pact: Pact; defaultPolicy
     isZero(pact.successor_addr) ? "" : pact.successor_addr,
   );
   const [pkg, setPkg] = useState(pact.package);
+
+  // Any of these three writes changes what this page shows, so the cached
+  // render has to go before the reader looks at it again.
+  useEffect(() => {
+    if (court.phase !== "accepted") return;
+    let cancelled = false;
+
+    (async () => {
+      await refreshVerdict(pact.repo);
+      if (!cancelled) router.refresh();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [court.phase, pact.repo, router]);
 
   const isSteward =
     court.address && !isZero(pact.steward)

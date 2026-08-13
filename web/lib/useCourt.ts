@@ -3,7 +3,12 @@
 import { useCallback, useRef, useState } from "react";
 import { useAccount, useConnect, useSwitchChain } from "wagmi";
 
+import { transactionsStatusNumberToName } from "genlayer-js/types";
+
 import { CHAIN, CONTRACT_ADDRESS, walletChain } from "./contract";
+
+/** The SDK's own enum mapping, so the names never drift from the protocol. */
+const STATUS_BY_NUMBER = transactionsStatusNumberToName as Record<string, string>;
 
 export type Phase =
   | "idle"
@@ -21,7 +26,41 @@ export const PHASE_STEPS: { key: Phase; label: string; note: string }[] = [
   { key: "finalized", label: "Final", note: "the appeal window has closed" },
 ];
 
-const TERMINAL_FAILURES = new Set(["CANCELED", "UNDETERMINED"]);
+const TERMINAL_FAILURES = new Set([
+  "CANCELED",
+  "UNDETERMINED",
+  "VALIDATORS_TIMEOUT",
+  "LEADER_TIMEOUT",
+]);
+
+/**
+ * Read the lifecycle status off a transaction, whichever shape it arrives in.
+ *
+ * On Studio the SDK hands back `statusName` in camelCase with `status` as a
+ * numeric enum; elsewhere the field is `status_name`. Reading the snake_case
+ * key alone silently fell through to the number, and `String(5)` never
+ * matches "ACCEPTED", so the progress stepper sat on "In consensus" forever
+ * while the transaction had long since finalised on chain.
+ */
+function readStatus(tx: unknown): string {
+  const record = tx as {
+    statusName?: unknown;
+    status_name?: unknown;
+    status?: unknown;
+  } | null;
+  if (!record) return "";
+
+  for (const value of [record.statusName, record.status_name, record.status]) {
+    if (typeof value === "string" && value.trim() !== "") {
+      return value.toUpperCase();
+    }
+    if (typeof value === "number") {
+      const name = STATUS_BY_NUMBER[String(value)];
+      if (name) return name.toUpperCase();
+    }
+  }
+  return "";
+}
 
 type CourtState = {
   phase: Phase;
@@ -145,11 +184,8 @@ export function useCourt() {
         const poll = async (attempt: number) => {
           if (attempt > 120) return;
           try {
-            const tx = (await client.getTransaction({ hash: hash as never })) as {
-              status?: string;
-              status_name?: string;
-            };
-            const status = String(tx?.status_name ?? tx?.status ?? "").toUpperCase();
+            const tx = await client.getTransaction({ hash: hash as never });
+            const status = readStatus(tx);
 
             if (status === "FINALIZED") {
               setState({ phase: "finalized", hash, error: null });

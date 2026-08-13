@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { refreshVerdict } from "@/app/actions";
 import { normaliseRepo, repoPath } from "@/lib/format";
 import { useCourt } from "@/lib/useCourt";
 
@@ -22,12 +23,20 @@ export function InquestForm({ autofocus = false }: { autofocus?: boolean }) {
 
   const repo = normaliseRepo(input);
 
-  // Once the verdict is on chain, walk the reader to the certificate.
+  // Once the verdict is on chain, drop the cached render before walking the
+  // reader to the certificate -- otherwise they arrive at the stale page.
   useEffect(() => {
-    if (court.phase === "accepted" && repo) {
-      const timer = setTimeout(() => router.push(repoPath(repo)), 1200);
-      return () => clearTimeout(timer);
-    }
+    if (court.phase !== "accepted" || !repo) return;
+    let cancelled = false;
+
+    (async () => {
+      await refreshVerdict(repo);
+      if (!cancelled) router.push(repoPath(repo));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [court.phase, repo, router]);
 
   async function submit(event: React.FormEvent) {
