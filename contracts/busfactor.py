@@ -598,27 +598,48 @@ def _inquest_validator(leader_result, repo: str, policy: str, now_iso: str) -> b
                 return False
         return True
 
-    # The leader failed. Agree only when we fail the same deterministic way.
-    leader_message = ""
-    if isinstance(leader_result, gl.vm.UserError):
-        leader_message = str(leader_result.message)
-    elif isinstance(leader_result, gl.vm.VMError):
+    # The leader failed.
+    #
+    # Returning True here does nothing: run_nondet compares the *type* of the
+    # validator's outcome against the leader's before it ever looks at the
+    # boolean, and a returned bool can never match a UserError. Agreeing on a
+    # failure means raising the same UserError, so that is what we do. Getting
+    # this wrong turned every rate-limited inquest into UNDETERMINED instead of
+    # a clean, agreed "this failed, try again".
+    if isinstance(leader_result, gl.vm.VMError):
         return False
+    if not isinstance(leader_result, gl.vm.UserError):
+        return False
+
+    leader_message = str(leader_result.message)
 
     try:
         _inquest_leader(repo, policy, now_iso)
-        return False
     except gl.vm.UserError as mine_error:
         my_message = str(mine_error.message)
+
+        # Deterministic failures: the wording must match exactly.
         if my_message.startswith(ERROR_EXPECTED) or my_message.startswith(
             ERROR_EXTERNAL
         ):
-            return my_message == leader_message
+            if my_message == leader_message:
+                raise gl.vm.UserError(leader_message)
+            return False
+
+        # Transient failures: both nodes hit the outside world and it pushed
+        # back. Agree that the attempt failed rather than fight about which
+        # kind of pushback it was.
         if my_message.startswith(ERROR_TRANSIENT) and leader_message.startswith(
             ERROR_TRANSIENT
         ):
-            return True
+            raise gl.vm.UserError(leader_message)
+
+        # LLM misbehaviour or anything unclassified: disagree and force a
+        # rotation rather than lock in a bad result.
         return False
+
+    # We succeeded where the leader failed.
+    return False
 
 
 # --------------------------------------------------------------------------
