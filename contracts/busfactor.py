@@ -56,12 +56,12 @@ VALID_STATUSES = (STATUS_ACTIVE, STATUS_FINISHED, STATUS_DORMANT, STATUS_ROTTING
 NEEDS_STEWARD = (STATUS_DORMANT, STATUS_ROTTING)
 
 DEFAULT_POLICY = (
-    "Treat this repository as dormant if the maintainer has not shipped a commit "
-    "and has not answered an issue or pull request for more than 180 days. "
-    "If the library is small and simply complete -- no open bugs, no broken "
-    "dependencies -- treat it as finished rather than dormant. "
-    "Escalate to rotting only if there are unanswered security-related threads "
-    "or the project is visibly broken."
+    "Treat this repository as dormant if nothing has been pushed for more than "
+    "180 days and reports are still arriving that nobody answers. "
+    "If the library is small and simply complete -- nothing open, nothing "
+    "broken -- treat it as finished rather than dormant. "
+    "Escalate to rotting only if the project is archived or the maintainer has "
+    "declared it abandoned while people still depend on it."
 )
 
 DEPRECATION_WORDS = (
@@ -233,8 +233,7 @@ def _derive_urgency(evidence: dict, status: str) -> int:
     if status not in NEEDS_STEWARD:
         return 0
     aggravating = (
-        bool(evidence.get("stale_security_thread"))
-        or bool(evidence.get("archived"))
+        bool(evidence.get("archived"))
         or bool(evidence.get("disabled"))
         or bool(evidence.get("self_declared_deprecated"))
     )
@@ -344,59 +343,17 @@ def _gather_evidence(repo: str, now_iso: str) -> dict:
     owner_login = str(owner.get("login") or repo.split("/")[0])
     owner_type = str(owner.get("type") or "User")
 
-    # Three round trips, small pages, on purpose. GitHub's event payloads are
-    # fat, and a leader that spends its whole deadline parsing JSON inside the
-    # VM gets rotated out before it can report -- which reads as a network
-    # fault but is really a self-inflicted one. `pushed_at` already carries the
-    # last-commit signal, so there is no fourth call for it.
-    threads = _github_json(
-        "/repos/" + repo + "/issues?state=open&sort=updated&direction=desc&per_page=8"
-    )
-    stale_threads = 0
-    oldest_thread_days = -1
-    newest_thread_days = -1
-    security_thread_stale = False
-    maintainer_replied = False
-
-    if isinstance(threads, list):
-        for thread in threads:
-            if not isinstance(thread, dict):
-                continue
-            updated_days = _age_days(now_iso, thread.get("updated_at"))
-            created_days = _age_days(now_iso, thread.get("created_at"))
-            if created_days > oldest_thread_days:
-                oldest_thread_days = created_days
-            if newest_thread_days < 0 or (0 <= updated_days < newest_thread_days):
-                newest_thread_days = updated_days
-            if updated_days > 90:
-                stale_threads += 1
-
-            title = str(thread.get("title") or "").lower()
-            labels = thread.get("labels") or []
-            label_text = ""
-            if isinstance(labels, list):
-                for label in labels:
-                    if isinstance(label, dict):
-                        label_text += " " + str(label.get("name") or "").lower()
-            blob = title + label_text
-            is_security = (
-                "security" in blob
-                or "cve" in blob
-                or "vulnerab" in blob
-                or "exploit" in blob
-            )
-            if is_security and updated_days > 60:
-                security_thread_stale = True
-
-            # A proxy, and worth naming as one: this fires when the owner is on
-            # a thread that has moved in the last 90 days. Proving they *replied*
-            # would need one more request per thread, which is exactly the kind
-            # of round-trip budget that gets a leader rotated out.
-            thread_author = (thread.get("user") or {}).get("login")
-            if str(thread_author or "").lower() == owner_login.lower():
-                if 0 <= updated_days <= 90:
-                    maintainer_replied = True
-
+    # Two round trips, and deliberately not three.
+    #
+    # There used to be a call for the eight most recently updated open issues,
+    # used to count stale threads and spot neglected security reports. It was
+    # dropped because that list is *ordered by recency*: on a busy repository
+    # the window slides between one validator's fetch and the next, so the
+    # derived counts disagreed and the whole inquest came back UNDETERMINED.
+    # `open_issues_count` below is a single stable number that answers the same
+    # question -- is work piling up -- without the moving parts. Cheaper too,
+    # and GitHub's unauthenticated budget is 60 requests an hour per address.
+    #
     # Is the maintainer gone, or just done with this one project? That single
     # question separates a burned-out human from a finished library, and it is
     # why no timestamp on the repo alone can settle dormancy.
@@ -457,11 +414,6 @@ def _gather_evidence(repo: str, now_iso: str) -> dict:
         "open_threads": _count_bucket(_to_int(meta.get("open_issues_count"))),
         "since_last_push": _age_bucket(_age_days(now_iso, meta.get("pushed_at"))),
         "since_repo_created": _age_bucket(_age_days(now_iso, meta.get("created_at"))),
-        "stale_open_threads": _count_bucket(stale_threads),
-        "oldest_open_thread_age": _age_bucket(oldest_thread_days),
-        "newest_thread_activity": _age_bucket(newest_thread_days),
-        "stale_security_thread": security_thread_stale,
-        "maintainer_replied_recently": maintainer_replied,
         "maintainer_active_elsewhere": elsewhere,
         "maintainer_active_here": this_repo_is_their_latest,
         "self_declared_deprecated": _mentions_deprecation(description),
@@ -487,19 +439,18 @@ def _judge(evidence: dict, policy: str) -> dict:
         "threads, nothing broken. Silence here is not a defect.\n"
         '- "DORMANT": the maintainer has stopped, work is visibly piling up '
         "(stale threads, unanswered reports), but nothing is dangerous yet.\n"
-        '- "ROTTING": dormant AND harmful -- a stale security thread, a '
-        "self-declared abandonment with users still depending on it, or an "
-        "archived/disabled repository that others still rely on.\n\n"
+        '- "ROTTING": dormant AND harmful -- a self-declared abandonment with '
+        "users still depending on it, or an archived/disabled repository that "
+        "others still rely on.\n\n"
         "Apply these rules in order and stop at the first one that fires. They "
         "are binding -- do not override them with intuition:\n"
         '1. since_last_push is "0-7d", "8-30d" or "31-90d" -> ACTIVE.\n'
-        "2. maintainer_replied_recently is true -> ACTIVE.\n"
-        "3. archived is true, or disabled is true, or self_declared_deprecated "
+        "2. archived is true, or disabled is true, or self_declared_deprecated "
         'is true -> ROTTING if stars is "1k-10k" or "10k-50k" or "50k+", '
         "otherwise DORMANT.\n"
-        "4. stale_security_thread is true -> ROTTING.\n"
-        '5. stale_open_threads is "0" -> FINISHED.\n'
-        "6. otherwise -> DORMANT.\n\n"
+        '3. open_threads is "0" -> FINISHED. Silence with nothing pending is a '
+        "finished library, not an abandoned one.\n"
+        "4. otherwise -> DORMANT.\n\n"
         "Respond with JSON only, no prose, no markdown fence:\n"
         '{"status": "ACTIVE|FINISHED|DORMANT|ROTTING", '
         '"headline": "<one sentence, max 140 chars>", '
@@ -552,9 +503,7 @@ _PIVOTAL_FACTS = (
     "archived",
     "disabled",
     "since_last_push",
-    "stale_open_threads",
-    "stale_security_thread",
-    "maintainer_replied_recently",
+    "open_threads",
     "self_declared_deprecated",
 )
 

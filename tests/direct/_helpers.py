@@ -37,32 +37,12 @@ def repo_meta(**overrides) -> dict:
     return meta
 
 
-def thread(
-    title: str,
-    created_days: int,
-    updated_days: int,
-    user: str = "someone",
-    labels=None,
-) -> dict:
-    return {
-        "title": title,
-        "created_at": iso_days_ago(created_days),
-        "updated_at": iso_days_ago(updated_days),
-        "user": {"login": user},
-        "labels": [{"name": name} for name in (labels or [])],
-    }
-
-
 def owned_repo(full_name: str, pushed_days: int) -> dict:
     return {"full_name": full_name, "pushed_at": iso_days_ago(pushed_days)}
 
 
-def mock_github(direct_vm, meta=None, threads=None, owned=None):
-    """Register the three GitHub calls. Most specific pattern first."""
-    direct_vm.mock_web(
-        r"api\.github\.com/repos/[^/]+/[^/?]+/issues",
-        {"status": 200, "body": json.dumps(threads if threads is not None else [])},
-    )
+def mock_github(direct_vm, meta=None, owned=None):
+    """Register the two GitHub calls. Most specific pattern first."""
     direct_vm.mock_web(
         r"api\.github\.com/users/[^/]+/repos",
         {"status": 200, "body": json.dumps(owned if owned is not None else [])},

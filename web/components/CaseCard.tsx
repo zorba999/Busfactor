@@ -50,8 +50,8 @@ export function CaseCard({ pact, index }: { pact: Pact; index: number }) {
           </dd>
         </div>
         <div>
-          <dt className="label">stale threads</dt>
-          <dd className="mono text-[0.72rem]">{evidence.stale_open_threads ?? "n/a"}</dd>
+          <dt className="label">open threads</dt>
+          <dd className="mono text-[0.72rem]">{evidence.open_threads ?? "n/a"}</dd>
         </div>
         <div>
           <dt className="label">heard</dt>

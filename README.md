@@ -49,9 +49,11 @@ Three constraints make consensus achievable over a non-deterministic input:
 - **Numbers are computed, not asked for.** Urgency is derived from facts the
   validators have already agreed on. Requesting a 0-100 score from the model
   produced `NO_MAJORITY` on sensible-but-different answers.
-- **Independent re-derivation.** The validator re-runs all three fetches and a
-  fresh ruling, then compares `needs_steward`, the urgency band and seven
+- **Independent re-derivation.** The validator re-runs both fetches and a
+  fresh ruling, then compares `needs_steward`, the urgency band and five
   pivotal facts. It never validates the leader's output by its shape alone.
+  Agreeing on a *failed* inquest means raising the same error, not returning
+  true: `run_nondet` type-checks the outcome before it reads the boolean.
 
 Ownership boundary: the frontend owns presentation and wallet UX; the contract
 owns the evidence snapshot, the ruling, the heartbeat clock and the successor
@@ -145,9 +147,13 @@ required for a fresh deploy.
 
 ## Limitations
 
-- **Unauthenticated GitHub API**: 60 requests/hour per IP, three per inquest per
-  validator. Sustained use trips rate limits and surfaces as `[TRANSIENT]`
-  errors. Production would front this with an authenticated proxy.
+- **Unauthenticated GitHub API**: 60 requests/hour per IP, two per inquest per
+  validator. Sustained testing trips the limit and surfaces as a `[TRANSIENT]`
+  failure that all validators agree on. Production would front this with an
+  authenticated proxy. An earlier version also read the eight most recently
+  updated issues; that list slides between one validator's fetch and the next,
+  so derived counts disagreed and inquests on busy repositories came back
+  UNDETERMINED. `open_issues_count` answers the same question and holds still.
 - **`LEADER_TIMEOUT` is transient.** A leader that misses its deadline is
   rotated and the transaction settles as `IDLE` with no state change; retrying
   is the correct response. Keeping each non-deterministic block small is the

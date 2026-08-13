@@ -6,7 +6,6 @@ from _helpers import (
     mock_verdict,
     owned_repo,
     repo_meta,
-    thread,
 )
 
 
@@ -37,7 +36,6 @@ def test_quiet_but_complete_library_is_finished_not_dormant(court, direct_vm):
     mock_github(
         direct_vm,
         meta=repo_meta(open_issues_count=0, pushed_at=iso_days_ago(900)),
-        threads=[],
         owned=[owned_repo("acme/other-thing", 4), owned_repo("acme/widget", 900)],
     )
     mock_verdict(
@@ -56,39 +54,40 @@ def test_quiet_but_complete_library_is_finished_not_dormant(court, direct_vm):
 
     evidence = json.loads(pact["evidence_json"])
     assert evidence["since_last_push"] == "2y+"
-    assert evidence["stale_open_threads"] == "0"
+    assert evidence["open_threads"] == "0"
     assert evidence["maintainer_active_elsewhere"] == "high"
     assert evidence["maintainer_active_here"] is False
 
 
-def test_stale_security_thread_surfaces_as_rotting(court, direct_vm):
+def test_archived_and_deprecated_surfaces_as_rotting(court, direct_vm):
     mock_github(
         direct_vm,
-        meta=repo_meta(open_issues_count=64, pushed_at=iso_days_ago(500)),
-        threads=[
-            thread("CVE-2025-1234 prototype pollution", 300, 200, labels=["security"]),
-            thread("Build broken on node 24", 250, 240),
-            thread("Docs typo", 20, 5),
-        ],
+        meta=repo_meta(
+            open_issues_count=64,
+            pushed_at=iso_days_ago(500),
+            archived=True,
+            description="DEPRECATED, no longer maintained.",
+        ),
         owned=[],
     )
     mock_verdict(
         direct_vm,
         "ROTTING",
         90,
-        "An unanswered security report has sat untouched for months.",
-        reasons=["stale security thread", "no maintainer reply in 90 days"],
+        "Archived and deprecated while thousands still depend on it.",
+        reasons=["archived", "self-declared deprecated"],
     )
 
     court.open_inquest("acme/widget")
     pact = court.get_pact("acme/widget")
 
     assert pact["status"] == "ROTTING"
-    assert pact["urgency"] == 75  # snapped down to the 25-step bucket
+    assert pact["urgency"] == 75  # aggravated by archived + deprecated
     evidence = json.loads(pact["evidence_json"])
-    assert evidence["stale_security_thread"] is True
-    assert evidence["stale_open_threads"] == "1-5"
-    assert json.loads(pact["reasons_json"])[0] == "stale security thread"
+    assert evidence["archived"] is True
+    assert evidence["self_declared_deprecated"] is True
+    assert evidence["open_threads"] == "26-100"
+    assert json.loads(pact["reasons_json"])[0] == "archived"
 
 
 def test_urgency_is_derived_from_facts_not_taken_from_the_model(court, direct_vm):

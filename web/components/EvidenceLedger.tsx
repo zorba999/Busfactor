@@ -5,9 +5,7 @@ const PIVOTAL = new Set([
   "archived",
   "disabled",
   "since_last_push",
-  "stale_open_threads",
-  "stale_security_thread",
-  "maintainer_replied_recently",
+  "open_threads",
   "self_declared_deprecated",
 ]);
 
@@ -26,31 +24,9 @@ export function EvidenceLedger({ evidence }: { evidence: Evidence }) {
       note: bucketWords(evidence.since_last_push),
     },
     {
-      key: "stale_open_threads",
-      label: "threads untouched 90d+",
-      value: evidence.stale_open_threads ?? "n/a",
-    },
-    {
       key: "open_threads",
-      label: "open threads",
+      label: "open threads (issues + PRs)",
       value: evidence.open_threads ?? "n/a",
-    },
-    {
-      key: "oldest_open_thread_age",
-      label: "oldest open thread",
-      value: evidence.oldest_open_thread_age ?? "n/a",
-      note: bucketWords(evidence.oldest_open_thread_age),
-    },
-    {
-      key: "stale_security_thread",
-      label: "stale security thread",
-      value: yesNo(evidence.stale_security_thread),
-    },
-    {
-      key: "maintainer_replied_recently",
-      label: "owner on a live thread (90d)",
-      value: yesNo(evidence.maintainer_replied_recently),
-      note: "proxy, not proof of a reply",
     },
     {
       key: "maintainer_active_elsewhere",

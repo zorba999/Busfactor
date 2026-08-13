@@ -53,11 +53,6 @@ export type Evidence = {
   since_repo_created?: string;
   last_commit_by?: string;
   last_commit_by_owner?: boolean;
-  stale_open_threads?: string;
-  oldest_open_thread_age?: string;
-  newest_thread_activity?: string;
-  stale_security_thread?: boolean;
-  maintainer_replied_recently?: boolean;
   maintainer_active_elsewhere?: string;
   maintainer_active_here?: boolean;
   self_declared_deprecated?: boolean;
