@@ -32,6 +32,48 @@ type CourtState = {
 const INITIAL: CourtState = { phase: "idle", hash: null, error: null };
 
 /**
+ * Wallet and RPC failures arrive in every shape except a plain Error: viem
+ * wraps them, EIP-1193 throws bare `{ code, message }` objects, and some
+ * layers nest the real reason two `cause` levels down. An earlier version
+ * fell back to "The transaction was rejected" for anything that was not an
+ * `Error`, which reported a user rejection for faults that were nothing of
+ * the kind. Dig for the actual message instead.
+ */
+function describeError(error: unknown): string {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 4 && current && !seen.has(current); depth += 1) {
+    seen.add(current);
+    const candidate = current as {
+      code?: number | string;
+      shortMessage?: string;
+      details?: string;
+      message?: string;
+      cause?: unknown;
+    };
+
+    if (candidate.code === 4001 || candidate.code === "ACTION_REJECTED") {
+      return "You rejected the request in your wallet.";
+    }
+    if (candidate.code === 4902) {
+      return "Bradbury is not added to your wallet yet. Approve the network prompt and try again.";
+    }
+
+    const message =
+      candidate.shortMessage || candidate.details || candidate.message || "";
+    if (message.trim() !== "") {
+      const code = candidate.code !== undefined ? ` (code ${candidate.code})` : "";
+      return `${message}${code}`;
+    }
+
+    current = candidate.cause;
+  }
+
+  return "The wallet call failed and returned no reason. Check the browser console.";
+}
+
+/**
  * Bridges wagmi (wallet, chain) to genlayer-js (consensus calls).
  *
  * genlayer-js is imported lazily inside the callback so nothing touches
@@ -75,12 +117,17 @@ export function useCourt() {
         const { createClient } = await import("genlayer-js");
         const provider = (await connector.getProvider()) as never;
 
+        // Deliberately NOT calling client.connect(): it reaches for
+        // `window.ethereum` directly and tries to install the GenLayer
+        // MetaMask Snap, which throws before any signature is ever requested.
+        // Signing does not need the snap -- genlayer-js routes
+        // eth_sendTransaction straight through the EIP-1193 provider below,
+        // and wagmi has already put the wallet on the right chain.
         const client = createClient({
           chain: CHAIN,
           account: address,
           provider,
         });
-        await client.connect("testnetBradbury");
 
         setState({ phase: "signing", hash: null, error: null });
 
@@ -127,9 +174,14 @@ export function useCourt() {
 
         pollTimer.current = setTimeout(() => void poll(0), 3000);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "The transaction was rejected.";
-        setState({ phase: "error", hash: null, error: message.slice(0, 220) });
+        // Keep the raw object reachable in DevTools; the summary below is
+        // lossy by design.
+        console.error("[BusFactor] wallet call failed:", error);
+        setState({
+          phase: "error",
+          hash: null,
+          error: describeError(error).slice(0, 260),
+        });
       }
     },
     [address, chainId, connector, isConnected, switchChainAsync],
