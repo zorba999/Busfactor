@@ -42,6 +42,38 @@ const TERMINAL_FAILURES = new Set([
  * matches "ACCEPTED", so the progress stepper sat on "In consensus" forever
  * while the transaction had long since finalised on chain.
  */
+/**
+ * Consensus succeeding and the contract succeeding are different things.
+ *
+ * When every validator agrees the inquest hit GitHub's rate limit, that is a
+ * perfectly healthy ACCEPTED transaction whose execution rolled back. Without
+ * this the stepper marched to "Final" and the reader landed on a page with no
+ * new verdict and no explanation.
+ */
+function readExecutionError(tx: unknown): string | null {
+  const receipts = (tx as { consensus_data?: { leader_receipt?: unknown } } | null)
+    ?.consensus_data?.leader_receipt;
+  if (!receipts) return null;
+
+  const list = Array.isArray(receipts) ? receipts : [receipts];
+  for (const entry of list) {
+    const receipt = entry as {
+      execution_result?: string;
+      result?: { payload?: unknown } | string;
+    };
+    if (receipt?.execution_result !== "ERROR") continue;
+
+    const payload =
+      typeof receipt.result === "object" && receipt.result !== null
+        ? receipt.result.payload
+        : receipt.result;
+    return typeof payload === "string" && payload.trim() !== ""
+      ? payload
+      : "The inquest failed during execution.";
+  }
+  return null;
+}
+
 function readStatus(tx: unknown): string {
   const record = tx as {
     statusName?: unknown;
@@ -186,6 +218,12 @@ export function useCourt() {
           try {
             const tx = await client.getTransaction({ hash: hash as never });
             const status = readStatus(tx);
+
+            const executionError = readExecutionError(tx);
+            if (executionError) {
+              setState({ phase: "error", hash, error: executionError });
+              return;
+            }
 
             if (status === "FINALIZED") {
               setState({ phase: "finalized", hash, error: null });
