@@ -3,7 +3,7 @@ import { studionet } from "genlayer-js/chains";
 export const CHAIN = studionet;
 
 export const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ??
-  "0xd81256A53B0F1e4d856333B260E2011deBbf334b") as `0x${string}`;
+  "0xE484301bfc3eAe28001aD3B463FAA1FcB3a2aDe2") as `0x${string}`;
 
 /**
  * Deliberately not `CHAIN.blockExplorers.default.url`.

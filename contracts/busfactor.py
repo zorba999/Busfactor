@@ -128,8 +128,28 @@ def _err(kind: str, detail: str):
     return gl.vm.UserError(kind + " " + detail)
 
 
-def _norm_repo(repo: str) -> str:
-    cleaned = repo.strip().lower()
+def _as_text(value, field: str) -> str:
+    """Never assume calldata holds what the signature says.
+
+    Callers are wallets, scripts and CLIs, and they encode surprising things:
+    a hex address arrives as an int, an omitted argument shifts every one
+    after it. Reaching straight for `.strip()` turns that into a hard VMError
+    with a Python traceback. A typed complaint is far more useful.
+    """
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return ""
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            return bytes(value).decode("utf-8")
+        except UnicodeDecodeError:
+            raise _err(ERROR_EXPECTED, field + " is not valid text")
+    raise _err(ERROR_EXPECTED, field + " must be text")
+
+
+def _norm_repo(repo) -> str:
+    cleaned = _as_text(repo, "repository").strip().lower()
     for prefix in ("https://github.com/", "http://github.com/", "github.com/", "www."):
         if cleaned.startswith(prefix):
             cleaned = cleaned[len(prefix) :]
@@ -300,17 +320,19 @@ def _to_address(value) -> Address:
             return Address(text)
         except (ValueError, TypeError):
             raise _err(ERROR_EXPECTED, "successor address is not a valid address")
-    return Address(ZERO_ADDRESS_BYTES)
+    if value is None:
+        return Address(ZERO_ADDRESS_BYTES)
+    raise _err(ERROR_EXPECTED, "successor address must be a 0x address string")
 
 
-def _norm_handle(handle: str) -> str:
+def _norm_handle(handle) -> str:
     """Validate a GitHub username against GitHub's own rules.
 
     A successor is the one account that may ever inherit a repository, so
     accepting free text here would let a steward "name" a successor that can
     never be checked against anything.
     """
-    cleaned = handle.strip().lstrip("@")
+    cleaned = _as_text(handle, "successor handle").strip().lstrip("@")
     if cleaned == "":
         return ""
     if len(cleaned) > 39:
@@ -841,7 +863,7 @@ class BusFactor(gl.Contract):
             if existing.registered and existing.steward != sender:
                 raise _err(ERROR_EXPECTED, "this pact already has a steward")
 
-        cleaned_policy = policy.strip()
+        cleaned_policy = _as_text(policy, "policy").strip()
         if len(cleaned_policy) > 1200:
             raise _err(ERROR_EXPECTED, "policy is too long")
 
@@ -866,7 +888,7 @@ class BusFactor(gl.Contract):
 
         pact.steward = sender
         pact.registered = True
-        pact.package = package.strip()[:120]
+        pact.package = _as_text(package, "registry id").strip()[:120]
         pact.policy = cleaned_policy if cleaned_policy != "" else DEFAULT_POLICY
         pact.successor_handle = clean_handle
         pact.successor_addr = clean_addr
