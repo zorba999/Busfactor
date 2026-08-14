@@ -42,6 +42,13 @@ ERROR_LLM = "[LLM_ERROR]"
 
 GITHUB_API = "https://api.github.com"
 
+# Proof of control lives in the repository itself. Only an account with write
+# access can put a file on the default branch, which is exactly the authority
+# a steward is claiming. Served from raw.githubusercontent.com, which is a
+# separate host from the REST API and does not spend its 60/hour budget.
+GITHUB_RAW = "https://raw.githubusercontent.com"
+CONTROL_FILE = ".busfactor"
+
 HTTP_HEADERS = {
     "User-Agent": "BusFactor-GenLayer-IntelligentContract",
     "Accept": "application/vnd.github+json",
@@ -294,6 +301,71 @@ def _to_address(value) -> Address:
         except (ValueError, TypeError):
             raise _err(ERROR_EXPECTED, "successor address is not a valid address")
     return Address(ZERO_ADDRESS_BYTES)
+
+
+def _norm_handle(handle: str) -> str:
+    """Validate a GitHub username against GitHub's own rules.
+
+    A successor is the one account that may ever inherit a repository, so
+    accepting free text here would let a steward "name" a successor that can
+    never be checked against anything.
+    """
+    cleaned = handle.strip().lstrip("@")
+    if cleaned == "":
+        return ""
+    if len(cleaned) > 39:
+        raise _err(ERROR_EXPECTED, "successor handle is too long")
+    if cleaned.startswith("-") or cleaned.endswith("-"):
+        raise _err(ERROR_EXPECTED, "successor handle cannot start or end with a hyphen")
+    if "--" in cleaned:
+        raise _err(ERROR_EXPECTED, "successor handle cannot contain a double hyphen")
+    for ch in cleaned:
+        if not (ch.isalnum() or ch == "-"):
+            raise _err(ERROR_EXPECTED, "successor handle has illegal characters")
+    return cleaned
+
+
+def _validated_successor(handle: str, addr) -> tuple:
+    """A successor is all or nothing: a handle with no address cannot be paid,
+    and an address with no handle cannot be checked against GitHub."""
+    clean_handle = _norm_handle(handle)
+    clean_addr = _to_address(addr)
+    has_addr = clean_addr != Address(ZERO_ADDRESS_BYTES)
+
+    if clean_handle == "" and not has_addr:
+        return "", clean_addr  # no successor at all: handover stays disarmed
+    if clean_handle == "":
+        raise _err(ERROR_EXPECTED, "successor address given without a github handle")
+    if not has_addr:
+        raise _err(ERROR_EXPECTED, "successor handle given without an address")
+    return clean_handle, clean_addr
+
+
+def _proves_control(repo: str, claimant_hex: str) -> bool:
+    """Does the repository itself vouch for this wallet?
+
+    The claimant must commit a `.busfactor` file to the default branch holding
+    their address. Anyone can open an inquest on any repository, but claiming
+    to *be* the maintainer has to cost something only a maintainer can pay.
+    """
+    url = GITHUB_RAW + "/" + repo + "/HEAD/" + CONTROL_FILE
+    response = gl.nondet.web.get(url, headers={"User-Agent": HTTP_HEADERS["User-Agent"]})
+
+    if response.status == 404:
+        return False
+    if response.status in (403, 429):
+        raise _err(ERROR_TRANSIENT, "github rate limit reached, retry shortly")
+    if response.status >= 500:
+        raise _err(ERROR_TRANSIENT, "github is unavailable")
+    if response.status != 200 or response.body is None:
+        raise _err(ERROR_EXTERNAL, "could not read the control file")
+
+    try:
+        body = response.body.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+
+    return claimant_hex.lower() in body.lower()
 
 
 def _to_int(value, fallback: int = 0) -> int:
@@ -654,6 +726,18 @@ class BusFactor(gl.Contract):
         return self.pacts[repo]
 
     @gl.private
+    def _void_verdict(self, pact: Pact) -> None:
+        """Tear up the standing verdict and keep the status counters honest.
+
+        Called whenever the facts a verdict rested on stop being true: a
+        heartbeat, a policy rewrite, a change of successor.
+        """
+        if pact.has_verdict and pact.verdict.status != "":
+            self._bump("status:" + pact.verdict.status, -1)
+        pact.has_verdict = False
+        pact.verdict = self._blank_verdict()
+
+    @gl.private
     def _serialize(self, pact: Pact) -> dict:
         return {
             "repo": pact.repo,
@@ -674,11 +758,15 @@ class BusFactor(gl.Contract):
             "evidence_json": pact.verdict.evidence_json,
             "decided_at": pact.verdict.decided_at,
             "decided_by": pact.verdict.decided_by.as_hex,
-            # Handover is gated on a successor the maintainer named while alive.
+            # Handover is gated on a complete successor the maintainer named
+            # while alive, and on a verdict that has not been voided since.
+            # Both halves matter: a handle with no address names an heir who
+            # cannot receive anything.
             "handover_armed": (
                 pact.has_verdict
                 and pact.registered
                 and pact.successor_handle != ""
+                and pact.successor_addr != Address(ZERO_ADDRESS_BYTES)
                 and pact.verdict.status in (STATUS_DORMANT, STATUS_ROTTING)
             ),
         }
@@ -741,24 +829,57 @@ class BusFactor(gl.Contract):
         and holding the key. That ordering is the whole anti-takeover design.
         """
         repo_id = _norm_repo(repo)
-        pact = self._ensure_pact(repo_id)
         sender = gl.message.sender_address
 
-        if pact.registered and pact.steward != sender:
-            raise _err(ERROR_EXPECTED, "this pact already has a steward")
+        # Everything below the proof runs only after the caller has earned it.
+        # Nothing is written to storage first -- not even the empty pact row --
+        # so a refused claim leaves no trace it was ever attempted.
+        was_registered = False
+        if repo_id in self.pacts:
+            existing = self.pacts[repo_id]
+            was_registered = existing.registered
+            if existing.registered and existing.steward != sender:
+                raise _err(ERROR_EXPECTED, "this pact already has a steward")
 
         cleaned_policy = policy.strip()
         if len(cleaned_policy) > 1200:
             raise _err(ERROR_EXPECTED, "policy is too long")
 
+        clean_handle, clean_addr = _validated_successor(successor_handle, successor_addr)
+
+        # Opening an inquest is permissionless by design, but claiming to *be*
+        # the maintainer is the one action that must cost something only a
+        # maintainer can pay: a commit on the default branch.
+        claimant = sender.as_hex
+
+        def check_control():
+            return _proves_control(repo_id, claimant)
+
+        if not gl.eq_principle.strict_eq(check_control):
+            raise _err(
+                ERROR_EXPECTED,
+                "commit a " + CONTROL_FILE + " file containing " + claimant
+                + " to prove control",
+            )
+
+        pact = self._ensure_pact(repo_id)
+
         pact.steward = sender
         pact.registered = True
         pact.package = package.strip()[:120]
         pact.policy = cleaned_policy if cleaned_policy != "" else DEFAULT_POLICY
-        pact.successor_handle = successor_handle.strip().lstrip("@")[:80]
-        pact.successor_addr = _to_address(successor_addr)
+        pact.successor_handle = clean_handle
+        pact.successor_addr = clean_addr
         pact.last_heartbeat = self._now()
-        self._bump("registered", 1)
+
+        # The policy and the successor are both inputs to a verdict. Changing
+        # either one leaves the standing verdict describing a world that no
+        # longer exists, and arming a handover from it would let a steward pick
+        # the heir *after* the court had already ruled them absent.
+        self._void_verdict(pact)
+
+        if not was_registered:
+            self._bump("registered", 1)
 
     @gl.public.write
     def heartbeat(self, repo: str) -> None:
@@ -773,10 +894,7 @@ class BusFactor(gl.Contract):
         if pact.steward != gl.message.sender_address:
             raise _err(ERROR_EXPECTED, "only the steward can send a heartbeat")
 
-        if pact.has_verdict and pact.verdict.status != "":
-            self._bump("status:" + pact.verdict.status, -1)
-        pact.has_verdict = False
-        pact.verdict = self._blank_verdict()
+        self._void_verdict(pact)
         pact.last_heartbeat = self._now()
         self._bump("heartbeats", 1)
 
@@ -793,9 +911,15 @@ class BusFactor(gl.Contract):
         if not pact.registered or pact.steward != gl.message.sender_address:
             raise _err(ERROR_EXPECTED, "only the steward can designate a successor")
 
-        pact.successor_handle = successor_handle.strip().lstrip("@")[:80]
-        pact.successor_addr = _to_address(successor_addr)
+        clean_handle, clean_addr = _validated_successor(successor_handle, successor_addr)
+
+        pact.successor_handle = clean_handle
+        pact.successor_addr = clean_addr
         pact.last_heartbeat = self._now()
+
+        # Naming an heir is itself proof of life, and it changes who a handover
+        # would move things to. The old verdict cannot survive it.
+        self._void_verdict(pact)
 
     # -- views -------------------------------------------------------------
 

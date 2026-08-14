@@ -13,7 +13,7 @@ the leader instead of trusting it.
 
 | | |
 |---|---|
-| Contract | [`0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78`](https://explorer-studio.genlayer.com/address/0x9d71d8A233E9EC769757bC1C59EF587cB928Fd78) |
+| Contract | [`0xd81256A53B0F1e4d856333B260E2011deBbf334b`](https://explorer-studio.genlayer.com/address/0xd81256A53B0F1e4d856333B260E2011deBbf334b) |
 | Network | GenLayer Studio Network, chain `61999` |
 | Frontend | Next.js 16 App Router, deploys to Vercel unmodified |
 
@@ -21,10 +21,10 @@ the leader instead of trusting it.
 
 | Status | Meaning |
 |---|---|
-| `ACTIVE` | recent commits, or the maintainer is answering threads |
+| `ACTIVE` | pushed within the last three months |
 | `FINISHED` | quiet on purpose; nothing open, nothing broken |
 | `DORMANT` | the maintainer stopped and work is piling up |
-| `ROTTING` | dormant and harmful: stale security thread, or abandoned with users still depending on it |
+| `ROTTING` | archived or self-declared abandoned while people still depend on it |
 
 Each ruling stores the exact bucketed evidence snapshot it was based on, so an
 appeal re-argues the same facts.
@@ -33,8 +33,17 @@ appeal re-argues the same facts.
 
 BusFactor issues attestations. It does **not** transfer ownership of anything.
 
-`handover_armed` turns true only when the maintainer named a successor
-themselves, while alive and holding the key, before any claim existed.
+Claiming to be a repository's maintainer requires proving it: the claimant must
+commit a `.busfactor` file to the default branch containing their wallet
+address. Only an account with write access can do that, which is exactly the
+authority being claimed. Opening an inquest stays permissionless; only the
+claim is gated. The proof is read from `raw.githubusercontent.com`, a separate
+host from the REST API, so it does not spend the inquest budget.
+
+`handover_armed` turns true only when the maintainer named a complete successor
+themselves (handle *and* address), while alive and holding the key, before any
+claim existed. Changing the policy or the successor voids the standing verdict,
+so a handover can never be armed from state the court did not actually judge.
 Automatic handover is the xz/liblzma attack vector, not a feature: with no
 pre-designated successor, a `DORMANT` verdict moves nothing. A heartbeat from
 the steward clears any standing verdict immediately.
@@ -66,9 +75,9 @@ gate; GitHub supplies raw facts that are never trusted.
 | Method | Purpose |
 |---|---|
 | `open_inquest(repo)` | run an investigation and record a verdict; permissionless |
-| `register_pact(repo, package, policy, successor_handle, successor_addr)` | claim a repository and set its dormancy policy |
+| `register_pact(repo, package, policy, successor_handle, successor_addr)` | claim a repository (requires a `.busfactor` proof of control) and set its policy |
 | `heartbeat(repo)` | steward proof of life; clears any standing verdict |
-| `designate_successor(repo, successor_handle, successor_addr)` | steward-only |
+| `designate_successor(repo, successor_handle, successor_addr)` | steward-only; voids any standing verdict |
 
 **Views**
 

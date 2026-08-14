@@ -41,6 +41,28 @@ def owned_repo(full_name: str, pushed_days: int) -> dict:
     return {"full_name": full_name, "pushed_at": iso_days_ago(pushed_days)}
 
 
+def hex_of(account) -> str:
+    """gltest hands some address fixtures back as raw bytes and others as
+    Address objects. Normalise before comparing or embedding in a mock."""
+    if hasattr(account, "as_hex"):
+        return account.as_hex
+    if isinstance(account, (bytes, bytearray)):
+        return "0x" + bytes(account).hex()
+    return str(account)
+
+
+def mock_control_file(direct_vm, contents: str | None, status: int = 200):
+    """Stand in for `.busfactor` on the repository's default branch.
+
+    `contents=None` means the file is absent, which is the state every
+    repository is in until its real maintainer commits one.
+    """
+    direct_vm.mock_web(
+        r"raw\.githubusercontent\.com/.+/HEAD/\.busfactor",
+        {"status": 404 if contents is None else status, "body": contents or ""},
+    )
+
+
 def mock_github(direct_vm, meta=None, owned=None):
     """Register the two GitHub calls. Most specific pattern first."""
     direct_vm.mock_web(

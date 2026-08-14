@@ -1,7 +1,9 @@
 import json
 
 from _helpers import (
+    hex_of,
     iso_days_ago,
+    mock_control_file,
     mock_github,
     mock_verdict,
     owned_repo,
@@ -164,7 +166,10 @@ def test_a_missing_owner_feed_does_not_sink_the_inquest(court, direct_vm):
 # ----------------------------------------------------------- pacts & handover
 
 
-def test_registering_a_pact_stores_policy_and_successor(court, direct_vm, direct_bob):
+def test_registering_a_pact_stores_policy_and_successor(
+    court, direct_vm, direct_alice, direct_bob
+):
+    mock_control_file(direct_vm, f"busfactor-steward: {hex_of(direct_alice)}")
     court.register_pact(
         "acme/widget",
         "npm:widget",
@@ -177,13 +182,14 @@ def test_registering_a_pact_stores_policy_and_successor(court, direct_vm, direct
     assert pact["registered"] is True
     assert pact["policy"] == "If I go quiet for two seasons, hand it to Sarah."
     assert pact["successor_handle"] == "sarah-dev"
-    assert pact["successor_addr"].lower() == direct_bob.as_hex.lower()
+    assert pact["successor_addr"].lower() == hex_of(direct_bob).lower()
     assert pact["last_heartbeat"].startswith("2026-08-12")
 
 
 def test_a_second_maintainer_cannot_steal_a_registered_pact(
-    court, direct_vm, direct_bob
+    court, direct_vm, direct_alice, direct_bob
 ):
+    mock_control_file(direct_vm, f"busfactor-steward: {hex_of(direct_alice)}")
     court.register_pact("acme/widget", "", "", "sarah-dev", direct_bob)
 
     direct_vm.sender = direct_bob
@@ -191,11 +197,14 @@ def test_a_second_maintainer_cannot_steal_a_registered_pact(
         court.register_pact("acme/widget", "", "", "mallory", direct_bob)
 
 
-def test_handover_stays_disarmed_without_a_pre_designated_successor(court, direct_vm):
+def test_handover_stays_disarmed_without_a_pre_designated_successor(
+    court, direct_vm, direct_alice
+):
     """The xz lesson: a dormant verdict alone must never move stewardship."""
     mock_github(direct_vm, meta=repo_meta(pushed_at=iso_days_ago(600)))
     mock_verdict(direct_vm, "DORMANT", 70, "Quiet for a year and a half.")
 
+    mock_control_file(direct_vm, hex_of(direct_alice))
     court.register_pact("acme/widget", "", "", "", "")
     court.open_inquest("acme/widget")
 
@@ -205,10 +214,11 @@ def test_handover_stays_disarmed_without_a_pre_designated_successor(court, direc
 
 
 def test_handover_arms_only_with_a_successor_named_while_alive(
-    court, direct_vm, direct_bob
+    court, direct_vm, direct_alice, direct_bob
 ):
     mock_github(direct_vm, meta=repo_meta(pushed_at=iso_days_ago(600)))
     mock_verdict(direct_vm, "DORMANT", 70, "Quiet for a year and a half.")
+    mock_control_file(direct_vm, hex_of(direct_alice))
 
     court.register_pact("acme/widget", "", "", "sarah-dev", direct_bob)
     court.open_inquest("acme/widget")
@@ -219,9 +229,12 @@ def test_handover_arms_only_with_a_successor_named_while_alive(
 # ------------------------------------------------------------------ heartbeat
 
 
-def test_heartbeat_clears_a_standing_verdict(court, direct_vm, direct_bob):
+def test_heartbeat_clears_a_standing_verdict(
+    court, direct_vm, direct_alice, direct_bob
+):
     mock_github(direct_vm, meta=repo_meta(pushed_at=iso_days_ago(600)))
     mock_verdict(direct_vm, "DORMANT", 70, "Quiet for a year and a half.")
+    mock_control_file(direct_vm, hex_of(direct_alice))
 
     court.register_pact("acme/widget", "", "", "sarah-dev", direct_bob)
     court.open_inquest("acme/widget")
@@ -236,7 +249,10 @@ def test_heartbeat_clears_a_standing_verdict(court, direct_vm, direct_bob):
     assert court.get_stats()["heartbeats"] == 1
 
 
-def test_only_the_steward_can_send_a_heartbeat(court, direct_vm, direct_bob):
+def test_only_the_steward_can_send_a_heartbeat(
+    court, direct_vm, direct_alice, direct_bob
+):
+    mock_control_file(direct_vm, hex_of(direct_alice))
     court.register_pact("acme/widget", "", "", "sarah-dev", direct_bob)
 
     direct_vm.sender = direct_bob
@@ -249,7 +265,10 @@ def test_heartbeat_on_an_unknown_repo_reverts(court, direct_vm):
         court.heartbeat("acme/never-seen")
 
 
-def test_only_the_steward_can_designate_a_successor(court, direct_vm, direct_bob):
+def test_only_the_steward_can_designate_a_successor(
+    court, direct_vm, direct_alice, direct_bob
+):
+    mock_control_file(direct_vm, hex_of(direct_alice))
     court.register_pact("acme/widget", "", "", "", "")
 
     direct_vm.sender = direct_bob
@@ -300,3 +319,107 @@ def test_re_running_an_inquest_moves_the_status_counter(court, direct_vm):
 
 def test_unknown_repo_returns_an_empty_pact(court):
     assert court.get_pact("nobody/nothing") == {}
+
+
+# ------------------------------------------------------ proof of control
+#
+# Requested in review: an unrelated wallet must not be able to claim a
+# repository, and a handover must never arm from stale state.
+
+
+def test_a_stranger_cannot_claim_a_repository_they_do_not_control(
+    court, direct_vm, direct_bob
+):
+    """No `.busfactor` file on the default branch means no claim, full stop."""
+    mock_control_file(direct_vm, None)  # 404: the file does not exist
+
+    with direct_vm.expect_revert("prove control"):
+        court.register_pact("acme/widget", "", "", "sarah-dev", direct_bob)
+
+    assert court.get_pact("acme/widget") == {}
+
+
+def test_an_unrelated_wallet_is_refused_even_when_a_control_file_exists(
+    court, direct_vm, direct_alice, direct_charlie
+):
+    mock_control_file(direct_vm, f"busfactor-steward: {hex_of(direct_alice)}")
+
+    direct_vm.sender = direct_charlie
+    with direct_vm.expect_revert("prove control"):
+        court.register_pact("acme/widget", "", "", "sarah-dev", direct_charlie)
+
+
+def test_designating_a_successor_voids_the_standing_verdict(
+    court, direct_vm, direct_alice, direct_bob
+):
+    """The stale-state attack: rule first, then pick the heir. Not allowed."""
+    mock_github(direct_vm, meta=repo_meta(pushed_at=iso_days_ago(600)))
+    mock_verdict(direct_vm, "DORMANT", 70, "Quiet for a year and a half.")
+    mock_control_file(direct_vm, hex_of(direct_alice))
+
+    court.register_pact("acme/widget", "", "", "", "")
+    court.open_inquest("acme/widget")
+    assert court.get_pact("acme/widget")["handover_armed"] is False
+
+    # Naming an heir after the ruling must not arm it retroactively.
+    court.designate_successor("acme/widget", "sarah-dev", direct_bob)
+
+    pact = court.get_pact("acme/widget")
+    assert pact["successor_handle"] == "sarah-dev"
+    assert pact["has_verdict"] is False
+    assert pact["status"] == ""
+    assert pact["handover_armed"] is False
+    assert court.get_stats()["dormant"] == 0
+
+
+def test_rewriting_the_policy_voids_the_standing_verdict(
+    court, direct_vm, direct_alice, direct_bob
+):
+    """A verdict describes a world judged under one policy. Change it, void it."""
+    mock_github(direct_vm, meta=repo_meta(pushed_at=iso_days_ago(600)))
+    mock_verdict(direct_vm, "DORMANT", 70, "Quiet for a year and a half.")
+    mock_control_file(direct_vm, hex_of(direct_alice))
+
+    court.register_pact("acme/widget", "", "", "sarah-dev", direct_bob)
+    court.open_inquest("acme/widget")
+    assert court.get_pact("acme/widget")["handover_armed"] is True
+
+    court.register_pact(
+        "acme/widget", "", "Give me a full year before you call me gone.",
+        "sarah-dev", direct_bob,
+    )
+
+    pact = court.get_pact("acme/widget")
+    assert pact["has_verdict"] is False
+    assert pact["handover_armed"] is False
+    assert court.get_stats()["dormant"] == 0
+    assert court.get_stats()["registered"] == 1  # not double counted
+
+
+# --------------------------------------------------- successor validation
+
+
+def test_a_successor_address_without_a_handle_is_refused(
+    court, direct_vm, direct_alice, direct_bob
+):
+    mock_control_file(direct_vm, hex_of(direct_alice))
+
+    with direct_vm.expect_revert("without a github handle"):
+        court.register_pact("acme/widget", "", "", "", direct_bob)
+
+
+def test_a_successor_handle_without_an_address_is_refused(
+    court, direct_vm, direct_alice
+):
+    mock_control_file(direct_vm, hex_of(direct_alice))
+
+    with direct_vm.expect_revert("without an address"):
+        court.register_pact("acme/widget", "", "", "sarah-dev", "")
+
+
+def test_a_malformed_successor_handle_is_refused(court, direct_vm, direct_alice, direct_bob):
+    mock_control_file(direct_vm, hex_of(direct_alice))
+
+    for bad in ["-sarah", "sarah-", "sa--rah", "sarah dev", "sarah/dev", "s" * 40]:
+        with direct_vm.expect_revert("successor handle"):
+            court.register_pact("acme/widget", "", "", bad, direct_bob)

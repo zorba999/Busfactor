@@ -105,6 +105,26 @@ export function PactActions({ pact, defaultPolicy }: { pact: Pact; defaultPolicy
               person who may ever inherit it.
             </p>
 
+            <div
+              className="border-l-2 px-4 py-3"
+              style={{ borderColor: "var(--color-drift)", background: "#c2740a0f" }}
+            >
+              <p className="label" style={{ color: "var(--color-drift)" }}>
+                first, prove you control the repository
+              </p>
+              <p className="mt-2 text-[0.84rem] leading-relaxed text-ink-soft">
+                Commit a file named{" "}
+                <span className="mono text-[0.8rem]">.busfactor</span> to the
+                default branch of{" "}
+                <span className="mono text-[0.8rem]">{pact.repo}</span>,
+                containing your address. Only someone with write access can do
+                that, which is exactly the authority you are claiming.
+              </p>
+              <pre className="mono mt-3 overflow-x-auto border border-rule bg-paper-sunk px-3 py-2 text-[0.72rem]">
+                busfactor-steward: {court.address ?? "0x… connect your wallet"}
+              </pre>
+            </div>
+
             <label className="block">
               <span className="label">your dormancy policy</span>
               <textarea
@@ -147,8 +167,11 @@ export function PactActions({ pact, defaultPolicy }: { pact: Pact; defaultPolicy
             </label>
 
             <p className="mono text-[0.7rem] leading-relaxed text-ink-faint">
-              Leave the successor blank and a dormant verdict will still be
-              issued. It just will never move anything.
+              Leave both successor fields blank and a dormant verdict will still
+              be issued; it just will never move anything. Fill one and you must
+              fill the other, since a handle with no address names an heir who
+              cannot receive anything. Changing either the policy or the
+              successor voids any standing verdict.
             </p>
 
             <button
